@@ -78,4 +78,4 @@ No setup needed. Just set it up on another server, where NGINX will live.
 - Sign the client certificate with our CA cert.  Unlike signing our own server cert, this is what we want to do.
       openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key2 -set_serial 01 -out client.crt
 
-About how to do crl: [https://arcweb.co/securing-websites-nginx-and-client-side-certificate-authentication-linux/]https://arcweb.co/securing-websites-nginx-and-client-side-certificate-authentication-linux/
+About how to do crl: [https://arcweb.co/securing-websites-nginx-and-client-side-certificate-authentication-linux/]
