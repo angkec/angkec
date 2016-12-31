@@ -61,29 +61,29 @@ Instruct CouchDB to use proxy authentication, as this is exactly what we do here
 - location / proxies to CouchDB. 
 
 #### Generating NGINX client SSL Certificates:
-- Create the CA Key and Certificate for signing Client Certs
+##### Create the CA Key and Certificate for signing Client Certs
 
       openssl genrsa -des3 -out ca.key 4096
       openssl rsa -in ca.key -out ca.key2
       openssl req -new -x509 -days 365 -key ca.key2 -out ca.crt
 
-- Create the Server Key, CSR, and Certificate
+##### Create the Server Key, CSR, and Certificate
 
       openssl genrsa -des3 -out server.key 1024
       openssl rsa -in ca.key -out server.key2
       openssl req -new -key server.key2 -out server.csr
 
-- We're self signing our own server cert here.  This is a no-no in production.
+##### We're self signing our own server cert here.  This is a no-no in production.
 
       openssl x509 -req -days 365 -in server.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out server.crt
 
-- Create the Client Key and CSR
+##### Create the Client Key and CSR
 
       openssl genrsa -des3 -out client.key 1024
       openssl rsa -in ca.key -out client.key2
       openssl req -new -key client.key2 -out client.csr
 
-- Sign the client certificate with our CA cert.  Unlike signing our own server cert, this is what we want to do.
+##### Sign the client certificate with our CA cert.  Unlike signing our own server cert, this is what we want to do.
 
       openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key2 -set_serial 01 -out client.crt
 
@@ -94,11 +94,11 @@ About how to do crl: [https://arcweb.co/securing-websites-nginx-and-client-side-
 
 The key is to set the headers for sync requests:
 
-- CouchDB http:
+##### CouchDB http:
    
    {"source":"testdb","target":{"url":"http://127.0.0.1:5000/couchfront/testdb","headers":{"X-Auth-CouchDB-UserName":"angke","X-Auth-CouchDB-Roles":"_admin","X-Auth-CouchDB-Token":"random_token"}}}
    
-- PouchDB:
+##### PouchDB:
 
     db = new PouchDB('my_database');
     var remoteCouch = 'http://127.0.0.1:5000/couchfront/testdb'
@@ -120,7 +120,7 @@ The key is to set the headers for sync requests:
       console.log("done");
     }
    
-- CouchBase Lite (iOS, Android):
+##### CouchBase Lite (iOS, Android):
 
     NSURL *url = [NSURL URLWithString: @"http://127.0.0.1:5000/couchfront/testdb"];
     CBLReplication *push = [database createPushReplication: url];
