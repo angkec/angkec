@@ -8,7 +8,7 @@ So over the past few weeks I've been trying to use CouchDB as the backend for an
 ### General Concept:
  - A Python Flask based server acts as a CouchDB front to receive all sync requests, authenticate them via token and username provided in the HTTP Headers, then use requests to query the actual CouchDB. 
  - The actual CouchDB is hosted on an EC2 instance, behind an NGINX proxy. NGINX is there to provide client side SSL Authentication so only the Python Flask server will have access. 
- - The client CouchDB can set arbitrary headers, making perfect for Flask's token based authentication. 
+ - The client CouchDB can set arbitrary headers, making it perfect for Flask's token based authentication. 
  
 ### Setup Details:
 #### Python Flask:
@@ -21,7 +21,11 @@ So over the past few weeks I've been trying to use CouchDB as the backend for an
  - we are basically relaying the CouchDB sync request to the central CouchDB on EC2. Before requesting, we have the luxury of authenticating and throttling and even device number limiting our clients. 
  
 #### CouchDB:
-No setup needed. Just set it up on another server, where NGINX will live.
+Set it up on another server, where NGINX will live.
+
+Instruct CouchDB to use proxy authentication, as this is exactly what we do here. 
+
+    authentication_handlers = {couch_httpd_oauth, oauth_authentication_handler}, {couch_httpd_auth, cookie_authentication_handler}, {couch_httpd_auth, proxy_authentication_handler}, {couch_httpd_auth, default_authentication_handler}
 
 #### NGINX Proxy:
     # HTTPS server
@@ -84,3 +88,51 @@ No setup needed. Just set it up on another server, where NGINX will live.
       openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key2 -set_serial 01 -out client.crt
 
 About how to do crl: [https://arcweb.co/securing-websites-nginx-and-client-side-certificate-authentication-linux/]
+
+
+### How to instruct client CouchDB to use our authentication system.
+
+The key is to set the headers for sync requests:
+
+- CouchDB http:
+   
+   {"source":"testdb","target":{"url":"http://127.0.0.1:5000/couchfront/testdb","headers":{"X-Auth-CouchDB-UserName":"angke","X-Auth-CouchDB-Roles":"_admin","X-Auth-CouchDB-Token":"random_token"}}}
+   
+- PouchDB:
+
+    db = new PouchDB('my_database');
+    var remoteCouch = 'http://127.0.0.1:5000/couchfront/testdb'
+
+    function syncError(error) {
+     console.log("Sync Error: " + error);
+    }
+    function sync() {
+      console.log("syncing");
+      var opts = {
+       live: false, 
+       ajax: { headers: {
+        "X-Auth-CouchDB-UserName": "angke",
+        "X-Auth-CouchDB-Roles": "_admin",
+        "X-Auth-CouchDB-Token": "random_token"
+       }}};
+      db.replicate.to(remoteCouch, opts, syncError);
+      // db.replicate.from(remoteCouch, opts, syncError);
+      console.log("done");
+    }
+   
+- CouchBase Lite (iOS, Android):
+
+    NSURL *url = [NSURL URLWithString: @"http://127.0.0.1:5000/couchfront/testdb"];
+    CBLReplication *push = [database createPushReplication: url];
+    CBLReplication *pull = [database createPullReplication: url];
+    // push.continuous = YES;
+    // pull.continuous = YES;
+    
+    // Add authentication.
+    pull.headers = [[NSDictionary alloc] initWithObjectsAndKeys:@"angke", @"X-Auth-CouchDB-UserName",
+                    @"_admin", @"X-Auth-CouchDB-Roles", @"random_token", @"X-Auth-CouchDB-Token", nil];
+    push.headers = pull.headers;
+    
+    // Start replicating. 
+    [push start];
+    [pull start];
